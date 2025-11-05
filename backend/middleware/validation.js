@@ -109,7 +109,7 @@ const personSchemas = {
         })
     })
   },
-  
+
   update: {
     params: commonSchemas.idParam,
     body: Joi.object({
@@ -265,6 +265,128 @@ const punishmentSchemas = {
 };
 
 /**
+ * Action validation schemas
+ */
+const actionSchemas = {
+  create: {
+    body: Joi.object({
+      name: Joi.string().trim().min(1).max(100).required()
+        .messages({
+          'string.base': 'Nombre debe ser texto',
+          'string.empty': 'Nombre no puede estar vacío',
+          'string.min': 'Nombre debe tener al menos 1 carácter',
+          'string.max': 'Nombre no puede tener más de 100 caracteres',
+          'any.required': 'Nombre es requerido'
+        }),
+      value: Joi.number().integer().not(0).required()
+        .messages({
+          'number.base': 'Valor debe ser un número',
+          'number.integer': 'Valor debe ser un número entero',
+          'any.invalid': 'Valor no puede ser cero',
+          'any.required': 'Valor es requerido'
+        }),
+      type: Joi.string().valid('positive', 'negative').required()
+        .messages({
+          'string.base': 'Tipo debe ser texto',
+          'any.only': 'Tipo debe ser "positive" o "negative"',
+          'any.required': 'Tipo es requerido'
+        })
+    }).custom((value, helpers) => {
+      // Custom validation: positive type must have positive value, negative type must have negative value
+      if (value.type === 'positive' && value.value <= 0) {
+        return helpers.error('custom.positiveValue');
+      }
+      if (value.type === 'negative' && value.value >= 0) {
+        return helpers.error('custom.negativeValue');
+      }
+      return value;
+    }).messages({
+      'custom.positiveValue': 'Las acciones positivas deben tener valores positivos',
+      'custom.negativeValue': 'Las acciones negativas deben tener valores negativos'
+    })
+  },
+
+  update: {
+    params: commonSchemas.idParam,
+    body: Joi.object({
+      name: Joi.string().trim().min(1).max(100).optional()
+        .messages({
+          'string.base': 'Nombre debe ser texto',
+          'string.empty': 'Nombre no puede estar vacío',
+          'string.min': 'Nombre debe tener al menos 1 carácter',
+          'string.max': 'Nombre no puede tener más de 100 caracteres'
+        }),
+      value: Joi.number().integer().not(0).optional()
+        .messages({
+          'number.base': 'Valor debe ser un número',
+          'number.integer': 'Valor debe ser un número entero',
+          'any.invalid': 'Valor no puede ser cero'
+        }),
+      type: Joi.string().valid('positive', 'negative').optional()
+        .messages({
+          'string.base': 'Tipo debe ser texto',
+          'any.only': 'Tipo debe ser "positive" o "negative"'
+        })
+    }).custom((value, helpers) => {
+      // Custom validation for consistency between type and value
+      if (value.type && value.value !== undefined) {
+        if (value.type === 'positive' && value.value <= 0) {
+          return helpers.error('custom.positiveValue');
+        }
+        if (value.type === 'negative' && value.value >= 0) {
+          return helpers.error('custom.negativeValue');
+        }
+      }
+      return value;
+    }).messages({
+      'custom.positiveValue': 'Las acciones positivas deben tener valores positivos',
+      'custom.negativeValue': 'Las acciones negativas deben tener valores negativos'
+    })
+  },
+
+  getById: {
+    params: commonSchemas.idParam
+  },
+
+  delete: {
+    params: commonSchemas.idParam
+  },
+
+  search: {
+    query: Joi.object({
+      q: Joi.string().trim().min(1).max(100).required()
+        .messages({
+          'string.base': 'Término de búsqueda debe ser texto',
+          'string.empty': 'Término de búsqueda no puede estar vacío',
+          'string.min': 'Término de búsqueda debe tener al menos 1 carácter',
+          'string.max': 'Término de búsqueda no puede tener más de 100 caracteres',
+          'any.required': 'Término de búsqueda es requerido'
+        })
+    })
+  },
+
+  filter: {
+    query: Joi.object({
+      type: Joi.string().valid('positive', 'negative').optional()
+        .messages({
+          'string.base': 'Tipo debe ser texto',
+          'any.only': 'Tipo debe ser "positive" o "negative"'
+        }),
+      minValue: Joi.number().integer().optional()
+        .messages({
+          'number.base': 'Valor mínimo debe ser un número',
+          'number.integer': 'Valor mínimo debe ser un número entero'
+        }),
+      maxValue: Joi.number().integer().optional()
+        .messages({
+          'number.base': 'Valor máximo debe ser un número',
+          'number.integer': 'Valor máximo debe ser un número entero'
+        })
+    })
+  }
+};
+
+/**
  * Assignment validation schemas
  */
 const assignmentSchemas = {
@@ -284,10 +406,11 @@ const assignmentSchemas = {
           'array.min': 'Debe seleccionar al menos una persona',
           'any.required': 'IDs de personas son requeridos'
         }),
-      itemType: Joi.string().valid('reward', 'punishment').required()
+      // Updated to support both legacy and new action system
+      itemType: Joi.string().valid('reward', 'punishment', 'action').required()
         .messages({
           'string.base': 'Tipo de elemento debe ser texto',
-          'any.only': 'Tipo de elemento debe ser "reward" o "punishment"',
+          'any.only': 'Tipo de elemento debe ser "reward", "punishment" o "action"',
           'any.required': 'Tipo de elemento es requerido'
         }),
       itemId: Joi.number().integer().positive().required()
@@ -296,6 +419,13 @@ const assignmentSchemas = {
           'number.integer': 'ID de elemento debe ser un número entero',
           'number.positive': 'ID de elemento debe ser un número positivo',
           'any.required': 'ID de elemento es requerido'
+        }),
+      // New field for action-based assignments
+      actionId: Joi.number().integer().positive().optional()
+        .messages({
+          'number.base': 'ID de acción debe ser un número',
+          'number.integer': 'ID de acción debe ser un número entero',
+          'number.positive': 'ID de acción debe ser un número positivo'
         })
     })
   },
@@ -310,11 +440,33 @@ const assignmentSchemas = {
   }
 };
 
+// Validation middleware functions
+const validatePerson = validateRequest(personSchemas.create);
+const validatePersonUpdate = validateRequest(personSchemas.update);
+const validateReward = validateRequest(rewardSchemas.create);
+const validateRewardUpdate = validateRequest(rewardSchemas.update);
+const validatePunishment = validateRequest(punishmentSchemas.create);
+const validatePunishmentUpdate = validateRequest(punishmentSchemas.update);
+const validateAction = validateRequest(actionSchemas.create);
+const validateActionUpdate = validateRequest(actionSchemas.update);
+const validateAssignment = validateRequest(assignmentSchemas.create);
+
 module.exports = {
   validateRequest,
   commonSchemas,
   personSchemas,
   rewardSchemas,
   punishmentSchemas,
-  assignmentSchemas
+  actionSchemas,
+  assignmentSchemas,
+  // Middleware functions
+  validatePerson,
+  validatePersonUpdate,
+  validateReward,
+  validateRewardUpdate,
+  validatePunishment,
+  validatePunishmentUpdate,
+  validateAction,
+  validateActionUpdate,
+  validateAssignment
 };

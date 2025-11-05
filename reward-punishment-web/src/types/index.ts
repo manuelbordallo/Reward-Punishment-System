@@ -18,15 +18,30 @@ export interface Punishment {
     created_at?: string;
 }
 
+// New unified Action interface
+export interface Action {
+    id: number;
+    name: string;
+    value: number; // Can be positive or negative
+    type: 'positive' | 'negative';
+    created_at?: string;
+    updated_at?: string;
+}
+
 export interface Assignment {
     id: number;
     person_id: number;
-    item_type: 'reward' | 'punishment';
-    item_id: number;
-    assigned_at: string;
-    person_name?: string;
+    // Legacy fields (for backward compatibility)
+    item_type?: 'reward' | 'punishment' | 'action';
+    item_id?: number;
     item_name?: string;
     item_value?: number;
+    // New action-based fields
+    action_id?: number;
+    action_name?: string;
+    action_value?: number;
+    assigned_at: string;
+    person_name?: string;
 }
 
 export interface Score {
