@@ -4,7 +4,8 @@
     "description": "Backend API for reward and punishment management system",
     "main": "src/index.js",
     "scripts": {
-        "start": "node src/index.js",
+        "start": "node start.js",
+        "start:dev": "node src/index.js",
         "dev": "nodemon src/index.js",
         "test": "jest",
         "test:watch": "jest --watch",
