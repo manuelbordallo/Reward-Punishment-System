@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Person, Reward, Punishment, Assignment, Score, WeeklyScore } from '../types';
 
+// For single service deployment, use relative URLs
 const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 const api = axios.create({
@@ -35,7 +36,7 @@ export const rewardApi = {
 // Punishment API
 export const punishmentApi = {
     getAll: () => api.get<ApiResponse<Punishment[]>>('/punishments'),
-    create: (data: { name: string; value: number }) => api.post<ApiResponse<Punishment>>('/punishments', data),
+    create: (data: { name: string; value: number }) => api.post<ApiResponse<Punishment>>('/punishments, data),
     update: (id: number, data: { name: string; value: number }) => api.put<ApiResponse<Punishment>>(`/punishments/${id}`, data),
     delete: (id: number) => api.delete(`/punishments/${id}`),
 };

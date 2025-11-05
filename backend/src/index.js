@@ -65,3 +65,8 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+// Serve frontend in production
+if (process.env.NODE_ENV === 'production') {
+  const serveFrontend = require('../serve-frontend');
+  serveFrontend(app);
+}
