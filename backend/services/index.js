@@ -10,4 +10,13 @@ module.exports = {
   PunishmentService,
   AssignmentService,
   ScoreCalculationService
+};const ActionService = require('./ActionService');
+
+module.exports = {
+  PersonService,
+  RewardService,
+  PunishmentService,
+  ActionService,
+  AssignmentService,
+  ScoreCalculationService
 };

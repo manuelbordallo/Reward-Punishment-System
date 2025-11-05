@@ -8,4 +8,12 @@ module.exports = {
     RewardRepository,
     PunishmentRepository,
     AssignmentRepository
+};const ActionRepository = require('./ActionRepository');
+
+module.exports = {
+  PersonRepository,
+  RewardRepository,
+  PunishmentRepository,
+  ActionRepository,
+  AssignmentRepository
 };

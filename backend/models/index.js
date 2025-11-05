@@ -68,4 +68,13 @@ module.exports = {
   createNotFoundErrorResponse,
   createAlreadyExistsErrorResponse,
   createDatabaseErrorResponse
+};const Action = require('./Action');
+
+module.exports = {
+  Person,
+  Reward,
+  Punishment,
+  Action,
+  Assignment,
+  ApiResponse
 };

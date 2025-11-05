@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Person, Reward, Punishment, Assignment } from '../types';
-import { personApi, rewardApi, punishmentApi, assignmentApi } from '../services/api';
+import { Person, Reward, Punishment, Action, Assignment } from '../types';
+import { personApi, rewardApi, punishmentApi, actionApi, assignmentApi } from '../services/api';
 
 const AssignmentManagement: React.FC = () => {
   const [persons, setPersons] = useState<Person[]>([]);
+  const [actions, setActions] = useState<Action[]>([]);
+  // Legacy support for existing rewards/punishments
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [punishments, setPunishments] = useState<Punishment[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
 
   const [selectedPersons, setSelectedPersons] = useState<number[]>([]);
-  const [itemType, setItemType] = useState<'reward' | 'punishment'>('reward');
+  const [useActions, setUseActions] = useState<boolean>(true); // Default to new actions system
+  const [itemType, setItemType] = useState<'reward' | 'punishment' | 'action'>('action');
   const [selectedItemId, setSelectedItemId] = useState<number>(0);
 
   const [loading, setLoading] = useState(false);
@@ -18,22 +21,37 @@ const AssignmentManagement: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [useActions]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [personsRes, rewardsRes, punishmentsRes, assignmentsRes] = await Promise.all([
-        personApi.getAll(),
-        rewardApi.getAll(),
-        punishmentApi.getAll(),
-        assignmentApi.getAll()
-      ]);
-
-      setPersons(personsRes.data.data || []);
-      setRewards(rewardsRes.data.data || []);
-      setPunishments(punishmentsRes.data.data || []);
-      setAssignments(assignmentsRes.data.data || []);
+      
+      if (useActions) {
+        // Load using new actions system
+        const [personsRes, actionsRes, assignmentsRes] = await Promise.all([
+          personApi.getAll(),
+          actionApi.getAll(),
+          assignmentApi.getAll()
+        ]);
+        
+        setPersons(personsRes.data.data || []);
+        setActions(actionsRes.data.data || []);
+        setAssignments(assignmentsRes.data.data || []);
+      } else {
+        // Load using legacy system
+        const [personsRes, rewardsRes, punishmentsRes, assignmentsRes] = await Promise.all([
+          personApi.getAll(),
+          rewardApi.getAll(),
+          punishmentApi.getAll(),
+          assignmentApi.getAll()
+        ]);
+        
+        setPersons(personsRes.data.data || []);
+        setRewards(rewardsRes.data.data || []);
+        setPunishments(punishmentsRes.data.data || []);
+        setAssignments(assignmentsRes.data.data || []);
+      }
     } catch (err) {
       setError('Failed to load data');
     } finally {
@@ -88,7 +106,18 @@ const AssignmentManagement: React.FC = () => {
     setSuccess('');
   };
 
-  const currentItems = itemType === 'reward' ? rewards : punishments;
+  const getCurrentItems = () => {
+    if (useActions) {
+      if (itemType === 'action') return actions;
+      return actions.filter(action => 
+        itemType === 'reward' ? action.type === 'positive' : action.type === 'negative'
+      );
+    } else {
+      return itemType === 'reward' ? rewards : punishments;
+    }
+  };
+
+  const currentItems = getCurrentItems();
 
   return (
     <div className="section">
@@ -110,32 +139,71 @@ const AssignmentManagement: React.FC = () => {
 
       <div className="assignment-form">
         <h3>Create New Assignment</h3>
+        
+        {/* System Toggle */}
+        <div className="form-group" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e7f3ff', borderRadius: '8px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <input
+              type="checkbox"
+              checked={useActions}
+              onChange={(e) => {
+                setUseActions(e.target.checked);
+                setItemType(e.target.checked ? 'action' : 'reward');
+                setSelectedItemId(0);
+              }}
+            />
+            Use new Actions system (recommended)
+          </label>
+          <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
+            {useActions 
+              ? 'Using unified actions system - manage rewards and punishments together' 
+              : 'Using legacy system - separate rewards and punishments'}
+          </small>
+        </div>
+
         <form onSubmit={handleAssign}>
           <div className="form-group">
             <label>Select Type:</label>
             <select
               value={itemType}
               onChange={(e) => {
-                setItemType(e.target.value as 'reward' | 'punishment');
+                setItemType(e.target.value as 'reward' | 'punishment' | 'action');
                 setSelectedItemId(0);
               }}
             >
-              <option value="reward">Reward</option>
-              <option value="punishment">Punishment</option>
+              {useActions ? (
+                <>
+                  <option value="action">All Actions</option>
+                  <option value="reward">Rewards Only</option>
+                  <option value="punishment">Punishments Only</option>
+                </>
+              ) : (
+                <>
+                  <option value="reward">Reward</option>
+                  <option value="punishment">Punishment</option>
+                </>
+              )}
             </select>
           </div>
 
           <div className="form-group">
-            <label>Select {itemType}:</label>
+            <label>
+              Select {useActions ? (itemType === 'action' ? 'Action' : itemType) : itemType}:
+            </label>
             <select
               value={selectedItemId}
               onChange={(e) => setSelectedItemId(parseInt(e.target.value))}
               required
             >
-              <option value={0}>Choose a {itemType}...</option>
+              <option value={0}>
+                Choose {useActions ? (itemType === 'action' ? 'an action' : `a ${itemType}`) : `a ${itemType}`}...
+              </option>
               {currentItems.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name} ({item.value > 0 ? '+' : ''}{item.value} points)
+                  {useActions && 'type' in item && (
+                    ` • ${item.type === 'positive' ? 'Reward' : 'Punishment'}`
+                  )}
                 </option>
               ))}
             </select>

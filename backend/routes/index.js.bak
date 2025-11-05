@@ -35,7 +35,6 @@ router.use('/persons', personRoutes);
 router.use('/rewards', rewardRoutes);
 router.use('/punishments', punishmentRoutes);
 router.use('/assignments', assignmentRoutes);
-router.use('/actions', actionRoutes);
 router.use('/scores', scoreRoutes);
 
 module.exports = router;
