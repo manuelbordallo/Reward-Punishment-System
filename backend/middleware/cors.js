@@ -12,10 +12,13 @@ const corsOptions = {
         // List of allowed origins
         const allowedOrigins = [
             'http://localhost:3000',      // React development server
+            'http://localhost:3001',      // React web app development
             'http://localhost:19006',     // Expo development server
             'http://localhost:8081',      // React Native Metro bundler
             'exp://localhost:19000',      // Expo client
             'exp://192.168.1.100:19000',  // Expo client on local network (example IP)
+            // Railway production URLs
+            'https://reward-punishment-frontend-production.up.railway.app',
             // Add more origins as needed for different development environments
         ];
 
@@ -29,6 +32,11 @@ const corsOptions = {
             return callback(null, true);
         }
 
+        // Allow Railway URLs
+        if (origin.includes('.up.railway.app')) {
+            return callback(null, true);
+        }
+
         // Check if origin is in allowed list
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
@@ -37,6 +45,7 @@ const corsOptions = {
             if (process.env.NODE_ENV === 'development') {
                 callback(null, true);
             } else {
+                console.log('CORS blocked origin:', origin);
                 callback(new Error('No permitido por CORS'));
             }
         }
@@ -98,12 +107,16 @@ const devCorsOptions = {
  */
 const prodCorsOptions = {
     origin: [
-        // Add your production mobile app domains here
+        // Railway frontend URL
+        'https://reward-punishment-frontend-production.up.railway.app',
+        // Allow any Railway subdomain for flexibility
+        /^https:\/\/.*\.up\.railway\.app$/,
+        // Add your production domains here
         // 'https://your-app.com',
         // 'https://api.your-app.com'
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
         'Origin',
         'X-Requested-With',
