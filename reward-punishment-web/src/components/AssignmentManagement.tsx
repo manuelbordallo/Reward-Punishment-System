@@ -21,12 +21,12 @@ const AssignmentManagement: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [useActions]);
+  }, [useActions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       if (useActions) {
         // Load using new actions system
         const [personsRes, actionsRes, assignmentsRes] = await Promise.all([
@@ -34,7 +34,7 @@ const AssignmentManagement: React.FC = () => {
           actionApi.getAll(),
           assignmentApi.getAll()
         ]);
-        
+
         setPersons(personsRes.data.data || []);
         setActions(actionsRes.data.data || []);
         setAssignments(assignmentsRes.data.data || []);
@@ -46,7 +46,7 @@ const AssignmentManagement: React.FC = () => {
           punishmentApi.getAll(),
           assignmentApi.getAll()
         ]);
-        
+
         setPersons(personsRes.data.data || []);
         setRewards(rewardsRes.data.data || []);
         setPunishments(punishmentsRes.data.data || []);
@@ -72,9 +72,24 @@ const AssignmentManagement: React.FC = () => {
     if (selectedPersons.length === 0 || selectedItemId === 0) return;
 
     try {
+      // Convert action type to legacy format for API compatibility
+      let apiItemType: 'reward' | 'punishment' = 'reward';
+
+      if (useActions) {
+        if (itemType === 'action') {
+          // Find the selected action to determine its type
+          const selectedAction = actions.find(action => action.id === selectedItemId);
+          apiItemType = selectedAction?.type === 'positive' ? 'reward' : 'punishment';
+        } else {
+          apiItemType = itemType as 'reward' | 'punishment';
+        }
+      } else {
+        apiItemType = itemType as 'reward' | 'punishment';
+      }
+
       const response = await assignmentApi.create({
         personIds: selectedPersons,
-        itemType,
+        itemType: apiItemType,
         itemId: selectedItemId
       });
 
@@ -109,7 +124,7 @@ const AssignmentManagement: React.FC = () => {
   const getCurrentItems = () => {
     if (useActions) {
       if (itemType === 'action') return actions;
-      return actions.filter(action => 
+      return actions.filter(action =>
         itemType === 'reward' ? action.type === 'positive' : action.type === 'negative'
       );
     } else {
@@ -139,7 +154,7 @@ const AssignmentManagement: React.FC = () => {
 
       <div className="assignment-form">
         <h3>Create New Assignment</h3>
-        
+
         {/* System Toggle */}
         <div className="form-group" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e7f3ff', borderRadius: '8px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -155,8 +170,8 @@ const AssignmentManagement: React.FC = () => {
             Use new Actions system (recommended)
           </label>
           <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
-            {useActions 
-              ? 'Using unified actions system - manage rewards and punishments together' 
+            {useActions
+              ? 'Using unified actions system - manage rewards and punishments together'
               : 'Using legacy system - separate rewards and punishments'}
           </small>
         </div>

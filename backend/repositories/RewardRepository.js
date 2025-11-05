@@ -11,7 +11,8 @@ class RewardRepository {
   async findAll() {
     const result = await query(`
       SELECT id, name, value, created_at, updated_at 
-      FROM rewards 
+      FROM actions 
+      WHERE type = 'positive'
       ORDER BY name ASC
     `);
     return result.rows;
@@ -25,8 +26,8 @@ class RewardRepository {
   async findById(id) {
     const result = await query(`
       SELECT id, name, value, created_at, updated_at 
-      FROM rewards 
-      WHERE id = $1
+      FROM actions 
+      WHERE id = ? AND type = 'positive'
     `, [id]);
     return result.rows[0] || null;
   }
@@ -39,8 +40,8 @@ class RewardRepository {
   async findByName(name) {
     const result = await query(`
       SELECT id, name, value, created_at, updated_at 
-      FROM rewards 
-      WHERE name ILIKE $1 
+      FROM actions 
+      WHERE name LIKE ? AND type = 'positive'
       ORDER BY name ASC
     `, [`%${name}%`]);
     return result.rows;
@@ -56,11 +57,18 @@ class RewardRepository {
   async create(rewardData) {
     const { name, value } = rewardData;
     const result = await query(`
-      INSERT INTO rewards (name, value) 
-      VALUES ($1, $2) 
-      RETURNING id, name, value, created_at, updated_at
+      INSERT INTO actions (name, value, type) 
+      VALUES (?, ?, 'positive')
     `, [name, value]);
-    return result.rows[0];
+
+    // Get the created record
+    const selectResult = await query(`
+      SELECT id, name, value, created_at, updated_at 
+      FROM actions 
+      WHERE id = ?
+    `, [result.insertId]);
+
+    return selectResult.rows[0];
   }
 
   /**
@@ -74,12 +82,23 @@ class RewardRepository {
   async update(id, rewardData) {
     const { name, value } = rewardData;
     const result = await query(`
-      UPDATE rewards 
-      SET name = $1, value = $2, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $3 
-      RETURNING id, name, value, created_at, updated_at
+      UPDATE actions 
+      SET name = ?, value = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ? AND type = 'positive'
     `, [name, value, id]);
-    return result.rows[0] || null;
+
+    if (result.rowCount === 0) {
+      return null;
+    }
+
+    // Get the updated record
+    const selectResult = await query(`
+      SELECT id, name, value, created_at, updated_at 
+      FROM actions 
+      WHERE id = ?
+    `, [id]);
+
+    return selectResult.rows[0] || null;
   }
 
   /**
@@ -89,8 +108,8 @@ class RewardRepository {
    */
   async delete(id) {
     const result = await query(`
-      DELETE FROM rewards 
-      WHERE id = $1
+      DELETE FROM actions 
+      WHERE id = ? AND type = 'positive'
     `, [id]);
     return result.rowCount > 0;
   }
@@ -100,7 +119,7 @@ class RewardRepository {
    * @returns {Promise<number>} Total count of rewards
    */
   async count() {
-    const result = await query('SELECT COUNT(*) as count FROM rewards');
+    const result = await query('SELECT COUNT(*) as count FROM actions WHERE type = \'positive\'');
     return parseInt(result.rows[0].count);
   }
 
@@ -111,8 +130,9 @@ class RewardRepository {
    */
   async isUsedInAssignments(id) {
     const result = await query(`
-      SELECT 1 FROM assignments 
-      WHERE item_type = 'reward' AND item_id = $1 
+      SELECT 1 FROM assignments a
+      JOIN actions ac ON a.action_id = ac.id
+      WHERE ac.type = 'positive' AND ac.id = $1 
       LIMIT 1
     `, [id]);
     return result.rows.length > 0;
@@ -126,17 +146,18 @@ class RewardRepository {
   async findMostUsed(limit = 10) {
     const result = await query(`
       SELECT 
-        r.id, 
-        r.name, 
-        r.value, 
-        r.created_at, 
-        r.updated_at,
+        ac.id, 
+        ac.name, 
+        ac.value, 
+        ac.created_at, 
+        ac.updated_at,
         COUNT(a.id) as usage_count
-      FROM rewards r
-      LEFT JOIN assignments a ON r.id = a.item_id AND a.item_type = 'reward'
-      GROUP BY r.id, r.name, r.value, r.created_at, r.updated_at
-      ORDER BY usage_count DESC, r.name ASC
-      LIMIT $1
+      FROM actions ac
+      LEFT JOIN assignments a ON ac.id = a.action_id AND a.action_value > 0
+      WHERE ac.type = 'positive'
+      GROUP BY ac.id, ac.name, ac.value, ac.created_at, ac.updated_at
+      ORDER BY usage_count DESC, ac.name ASC
+      LIMIT ?
     `, [limit]);
     return result.rows;
   }
@@ -150,8 +171,8 @@ class RewardRepository {
   async findByValueRange(minValue, maxValue) {
     const result = await query(`
       SELECT id, name, value, created_at, updated_at 
-      FROM rewards 
-      WHERE value >= $1 AND value <= $2 
+      FROM actions 
+      WHERE value >= ? AND value <= ? AND type = 'positive'
       ORDER BY value ASC, name ASC
     `, [minValue, maxValue]);
     return result.rows;

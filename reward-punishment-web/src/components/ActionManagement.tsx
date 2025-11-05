@@ -1,332 +1,304 @@
 import React, { useState, useEffect } from 'react';
-import { Action } from '../types';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  CardActions,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Chip,
+  IconButton,
+  Fab
+} from '@mui/material';
+import {
+  Add,
+  Delete,
+  Star,
+  Warning,
+  Edit
+} from '@mui/icons-material';
 import { actionApi } from '../services/api';
+import { Action } from '../types';
 
 const ActionManagement: React.FC = () => {
   const [actions, setActions] = useState<Action[]>([]);
-  const [newAction, setNewAction] = useState({ name: '', value: 0, type: 'positive' as 'positive' | 'negative' });
-  const [editingAction, setEditingAction] = useState<Action | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'positive' | 'negative'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editingAction, setEditingAction] = useState<Action | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    value: 0,
+    type: 'positive' as 'positive' | 'negative'
+  });
 
   useEffect(() => {
-    loadActions();
-  }, [filterType]);
+    fetchActions();
+  }, []);
 
-  const loadActions = async () => {
+  const fetchActions = async () => {
     try {
       setLoading(true);
-      let response;
-      
-      if (searchTerm.trim()) {
-        response = await actionApi.search(searchTerm.trim());
-      } else if (filterType === 'all') {
-        response = await actionApi.getAll();
-      } else {
-        response = await actionApi.getAll({ type: filterType });
-      }
-      
+      setError(null);
+      const response = await actionApi.getAll();
       setActions(response.data.data || []);
     } catch (err) {
-      setError('Failed to load actions');
-      console.error('Error loading actions:', err);
+      setError('Failed to fetch actions');
+      console.error('Error fetching actions:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAction.name.trim() || newAction.value === 0) return;
-
-    try {
-      // Ensure value matches type
-      const actionValue = newAction.type === 'positive' ? Math.abs(newAction.value) : -Math.abs(newAction.value);
-      
-      const response = await actionApi.create({
-        name: newAction.name.trim(),
-        value: actionValue,
-        type: newAction.type
+  const handleOpenDialog = (action?: Action) => {
+    if (action) {
+      setEditingAction(action);
+      setFormData({
+        name: action.name,
+        value: action.value,
+        type: action.type
       });
-      
-      if (response.data.success) {
-        setNewAction({ name: '', value: 0, type: 'positive' });
-        setSuccess('Action created successfully');
-        loadActions();
-      }
-    } catch (err) {
-      setError('Failed to create action');
+    } else {
+      setEditingAction(null);
+      setFormData({ name: '', value: 0, type: 'positive' });
     }
+    setOpenDialog(true);
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingAction || !editingAction.name.trim() || editingAction.value === 0) return;
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setEditingAction(null);
+    setFormData({ name: '', value: 0, type: 'positive' });
+  };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      // Ensure value matches type
-      const actionValue = editingAction.type === 'positive' ? Math.abs(editingAction.value) : -Math.abs(editingAction.value);
-      
-      const response = await actionApi.update(editingAction.id, {
-        name: editingAction.name.trim(),
-        value: actionValue,
-        type: editingAction.type
-      });
-      
-      if (response.data.success) {
-        setEditingAction(null);
-        setSuccess('Action updated successfully');
-        loadActions();
+      setLoading(true);
+      if (editingAction) {
+        await actionApi.update(editingAction.id, formData);
+      } else {
+        await actionApi.create(formData);
       }
+      handleCloseDialog();
+      fetchActions();
     } catch (err) {
-      setError('Failed to update action');
+      setError(`Failed to ${editingAction ? 'update' : 'create'} action`);
+      console.error(`Error ${editingAction ? 'updating' : 'creating'} action:`, err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this action?')) return;
-
+    if (!window.confirm('Are you sure you want to delete this action?')) {
+      return;
+    }
     try {
+      setLoading(true);
       await actionApi.delete(id);
-      setSuccess('Action deleted successfully');
-      loadActions();
+      fetchActions();
     } catch (err) {
       setError('Failed to delete action');
+      console.error('Error deleting action:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    loadActions();
-  };
-
-  const clearMessages = () => {
-    setError('');
-    setSuccess('');
-  };
-
-  const getActionTypeColor = (type: string) => {
-    return type === 'positive' ? '#28a745' : '#dc3545';
-  };
-
-  const getActionTypeLabel = (type: string) => {
-    return type === 'positive' ? 'Reward' : 'Punishment';
-  };
-
-  const filteredActions = actions.filter(action => {
-    if (filterType === 'all') return true;
-    return action.type === filterType;
-  });
+  const rewards = actions.filter(action => action.type === 'positive');
+  const punishments = actions.filter(action => action.type === 'negative');
 
   return (
-    <div className="section">
-      <h2>Action Management</h2>
-      <p>Manage both positive actions (rewards) and negative actions (punishments) in one place.</p>
-      
-      {error && (
-        <div className="error">
-          {error}
-          <button onClick={clearMessages} style={{ float: 'right' }}>×</button>
-        </div>
-      )}
-      
-      {success && (
-        <div className="success">
-          {success}
-          <button onClick={clearMessages} style={{ float: 'right' }}>×</button>
-        </div>
-      )}
-
-      {/* Search and Filter */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', flex: 1 }}>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search actions..."
-            style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-          />
-          <button type="submit" className="btn btn-primary">Search</button>
-          {searchTerm && (
-            <button 
-              type="button" 
-              className="btn" 
-              onClick={() => { setSearchTerm(''); loadActions(); }}
-            >
-              Clear
-            </button>
-          )}
-        </form>
-        
-        <select 
-          value={filterType} 
-          onChange={(e) => setFilterType(e.target.value as 'all' | 'positive' | 'negative')}
-          style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom>
+          Action Management
+        </Typography>
+        <Fab
+          color="primary"
+          aria-label="add"
+          onClick={() => handleOpenDialog()}
         >
-          <option value="all">All Actions</option>
-          <option value="positive">Rewards Only</option>
-          <option value="negative">Punishments Only</option>
-        </select>
-      </div>
+          <Add />
+        </Fab>
+      </Box>
 
-      {/* Create Form */}
-      <form onSubmit={handleCreate} style={{ marginBottom: '20px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-        <h3>Create New Action</h3>
-        <div className="two-column">
-          <div className="form-group">
-            <label>Action Name:</label>
-            <input
-              type="text"
-              value={newAction.name}
-              onChange={(e) => setNewAction({ ...newAction, name: e.target.value })}
-              placeholder="Enter action name"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Action Type:</label>
-            <select
-              value={newAction.type}
-              onChange={(e) => setNewAction({ ...newAction, type: e.target.value as 'positive' | 'negative' })}
-            >
-              <option value="positive">Reward (Positive)</option>
-              <option value="negative">Punishment (Negative)</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Points Value:</label>
-          <input
-            type="number"
-            value={newAction.value || ''}
-            onChange={(e) => setNewAction({ ...newAction, value: parseInt(e.target.value) || 0 })}
-            placeholder={newAction.type === 'positive' ? 'Enter positive value' : 'Enter positive value (will be made negative)'}
-            min="1"
-            required
-          />
-          <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
-            {newAction.type === 'positive' 
-              ? 'Enter a positive number for reward points' 
-              : 'Enter a positive number (it will be automatically made negative for punishments)'}
-          </small>
-        </div>
-        <button type="submit" className="btn btn-primary">Create Action</button>
-      </form>
-
-      {/* Edit Form */}
-      {editingAction && (
-        <form onSubmit={handleUpdate} style={{ marginBottom: '20px', padding: '20px', backgroundColor: '#fff3cd', borderRadius: '8px' }}>
-          <h3>Edit Action</h3>
-          <div className="two-column">
-            <div className="form-group">
-              <label>Action Name:</label>
-              <input
-                type="text"
-                value={editingAction.name}
-                onChange={(e) => setEditingAction({ ...editingAction, name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Action Type:</label>
-              <select
-                value={editingAction.type}
-                onChange={(e) => setEditingAction({ ...editingAction, type: e.target.value as 'positive' | 'negative' })}
-              >
-                <option value="positive">Reward (Positive)</option>
-                <option value="negative">Punishment (Negative)</option>
-              </select>
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Points Value:</label>
-            <input
-              type="number"
-              value={Math.abs(editingAction.value)}
-              onChange={(e) => setEditingAction({ ...editingAction, value: parseInt(e.target.value) || 0 })}
-              min="1"
-              required
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button type="submit" className="btn btn-success">Update Action</button>
-            <button type="button" className="btn" onClick={() => setEditingAction(null)}>Cancel</button>
-          </div>
-        </form>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
       )}
 
-      {/* Actions List */}
-      {loading ? (
-        <div className="loading">Loading actions...</div>
-      ) : (
-        <div>
-          <h3>
-            Actions ({filteredActions.length})
-            {filterType !== 'all' && (
-              <span style={{ fontSize: '0.8em', color: '#666' }}>
-                {' '}• Showing {filterType} actions only
-              </span>
-            )}
-          </h3>
-          
-          {filteredActions.length === 0 ? (
-            <p>No actions found. {searchTerm ? 'Try a different search term.' : 'Create your first action above!'}</p>
-          ) : (
-            filteredActions.map((action) => (
-              <div key={action.id} className="list-item">
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontWeight: 'bold' }}>{action.name}</span>
-                    <span 
-                      style={{ 
-                        padding: '2px 8px', 
-                        borderRadius: '12px', 
-                        fontSize: '0.8em',
-                        backgroundColor: getActionTypeColor(action.type),
-                        color: 'white'
-                      }}
-                    >
-                      {getActionTypeLabel(action.type)}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.9em', color: '#666', marginTop: '5px' }}>
-                    <span style={{ 
-                      color: getActionTypeColor(action.type), 
-                      fontWeight: 'bold' 
-                    }}>
-                      {action.value > 0 ? '+' : ''}{action.value} points
-                    </span>
-                    {action.created_at && (
-                      <span style={{ marginLeft: '10px' }}>
-                        Created: {new Date(action.created_at).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <button 
-                    className="btn btn-primary" 
-                    onClick={() => setEditingAction(action)}
+      {loading && (
+        <Box display="flex" justifyContent="center" my={4}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {/* Rewards Section */}
+      <Box mb={4}>
+        <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Star color="success" />
+          Rewards ({rewards.length})
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          {rewards.map((action) => (
+            <Box key={action.id} sx={{ minWidth: 300, flex: '1 1 300px' }}>
+              <Card elevation={2}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {action.name}
+                  </Typography>
+                  <Chip
+                    label={`+${action.value} points`}
+                    color="success"
+                    size="small"
+                  />
+                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                    Created: {action.created_at ? new Date(action.created_at).toLocaleDateString() : 'Unknown'}
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleOpenDialog(action)}
+                    color="primary"
                   >
-                    Edit
-                  </button>
-                  <button 
-                    className="btn btn-danger" 
+                    <Edit />
+                  </IconButton>
+                  <IconButton
+                    size="small"
                     onClick={() => handleDelete(action.id)}
+                    color="error"
                   >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))
+                    <Delete />
+                  </IconButton>
+                </CardActions>
+              </Card>
+            </Box>
+          ))}
+          {rewards.length === 0 && !loading && (
+            <Box sx={{ width: '100%', textAlign: 'center', py: 4 }}>
+              <Typography color="textSecondary">
+                No rewards found. Create your first reward!
+              </Typography>
+            </Box>
           )}
-        </div>
-      )}
-    </div>
+        </Box>
+      </Box>
+
+      {/* Punishments Section */}
+      <Box>
+        <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="warning" />
+          Punishments ({punishments.length})
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+          {punishments.map((action) => (
+            <Box key={action.id} sx={{ minWidth: 300, flex: '1 1 300px' }}>
+              <Card elevation={2}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {action.name}
+                  </Typography>
+                  <Chip
+                    label={`${action.value} points`}
+                    color="error"
+                    size="small"
+                  />
+                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                    Created: {action.created_at ? new Date(action.created_at).toLocaleDateString() : 'Unknown'}
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleOpenDialog(action)}
+                    color="primary"
+                  >
+                    <Edit />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDelete(action.id)}
+                    color="error"
+                  >
+                    <Delete />
+                  </IconButton>
+                </CardActions>
+              </Card>
+            </Box>
+          ))}
+          {punishments.length === 0 && !loading && (
+            <Box sx={{ width: '100%', textAlign: 'center', py: 4 }}>
+              <Typography color="textSecondary">
+                No punishments found. Create your first punishment!
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </Box>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+        <form onSubmit={handleSubmit}>
+          <DialogTitle>
+            {editingAction ? 'Edit Action' : 'Create New Action'}
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1 }}>
+              <TextField
+                fullWidth
+                label="Action Name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Point Value"
+                type="number"
+                value={formData.value}
+                onChange={(e) => setFormData({ ...formData, value: parseInt(e.target.value) || 0 })}
+                required
+                sx={{ mb: 2 }}
+                helperText="Positive values for rewards, negative for punishments"
+              />
+              <FormControl fullWidth>
+                <InputLabel>Type</InputLabel>
+                <Select
+                  value={formData.type}
+                  label="Type"
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'positive' | 'negative' })}
+                >
+                  <MenuItem value="positive">Reward (Positive)</MenuItem>
+                  <MenuItem value="negative">Punishment (Negative)</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button type="submit" variant="contained" disabled={loading}>
+              {loading ? 'Saving...' : (editingAction ? 'Update' : 'Create')}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+    </Box>
   );
 };
 

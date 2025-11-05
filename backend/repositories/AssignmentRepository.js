@@ -14,41 +14,45 @@ class AssignmentRepository {
    * @returns {Promise<Array>} Array of assignment objects
    */
   async findAll(options = {}) {
-    const { 
-      limit, 
-      offset = 0, 
-      orderBy = 'assigned_at', 
-      orderDirection = 'DESC' 
+    const {
+      limit,
+      offset = 0,
+      orderBy = 'assigned_at',
+      orderDirection = 'DESC'
     } = options;
-    
+
     let queryText = `
       SELECT 
         a.id, 
         a.person_id, 
-        a.item_type, 
-        a.item_id, 
-        a.item_name, 
-        a.item_value, 
+        a.action_id, 
+        a.action_name, 
+        a.action_value, 
         a.assigned_at,
-        p.name as person_name
+        p.name as person_name,
+        -- Legacy compatibility fields
+        CASE WHEN a.action_value > 0 THEN 'reward' ELSE 'punishment' END as item_type,
+        a.action_id as item_id,
+        a.action_name as item_name,
+        a.action_value as item_value
       FROM assignments a
       JOIN persons p ON a.person_id = p.id
       ORDER BY ${orderBy} ${orderDirection}
     `;
-    
+
     const params = [];
     let paramIndex = 1;
-    
+
     if (limit) {
       queryText += ` LIMIT $${paramIndex++}`;
       params.push(limit);
     }
-    
+
     if (offset > 0) {
       queryText += ` OFFSET $${paramIndex++}`;
       params.push(offset);
     }
-    
+
     const result = await query(queryText, params);
     return result.rows;
   }
@@ -63,12 +67,16 @@ class AssignmentRepository {
       SELECT 
         a.id, 
         a.person_id, 
-        a.item_type, 
-        a.item_id, 
-        a.item_name, 
-        a.item_value, 
+        a.action_id, 
+        a.action_name, 
+        a.action_value, 
         a.assigned_at,
-        p.name as person_name
+        p.name as person_name,
+        -- Legacy compatibility fields
+        CASE WHEN a.action_value > 0 THEN 'reward' ELSE 'punishment' END as item_type,
+        a.action_id as item_id,
+        a.action_name as item_name,
+        a.action_value as item_value
       FROM assignments a
       JOIN persons p ON a.person_id = p.id
       WHERE a.id = $1
@@ -87,42 +95,46 @@ class AssignmentRepository {
    */
   async findByPersonId(personId, options = {}) {
     const { limit, startDate, endDate } = options;
-    
+
     let queryText = `
       SELECT 
         a.id, 
         a.person_id, 
-        a.item_type, 
-        a.item_id, 
-        a.item_name, 
-        a.item_value, 
+        a.action_id, 
+        a.action_name, 
+        a.action_value, 
         a.assigned_at,
-        p.name as person_name
+        p.name as person_name,
+        -- Legacy compatibility fields
+        CASE WHEN a.action_value > 0 THEN 'reward' ELSE 'punishment' END as item_type,
+        a.action_id as item_id,
+        a.action_name as item_name,
+        a.action_value as item_value
       FROM assignments a
       JOIN persons p ON a.person_id = p.id
       WHERE a.person_id = $1
     `;
-    
+
     const params = [personId];
     let paramIndex = 2;
-    
+
     if (startDate) {
       queryText += ` AND a.assigned_at >= $${paramIndex++}`;
       params.push(startDate);
     }
-    
+
     if (endDate) {
       queryText += ` AND a.assigned_at <= $${paramIndex++}`;
       params.push(endDate);
     }
-    
+
     queryText += ' ORDER BY a.assigned_at DESC';
-    
+
     if (limit) {
       queryText += ` LIMIT $${paramIndex++}`;
       params.push(limit);
     }
-    
+
     const result = await query(queryText, params);
     return result.rows;
   }
@@ -139,20 +151,20 @@ class AssignmentRepository {
    */
   async createMultiple(assignmentData) {
     const { personIds, itemType, itemId, itemName, itemValue } = assignmentData;
-    
+
     return await transaction(async (client) => {
       const assignments = [];
-      
+
       for (const personId of personIds) {
         const result = await client.query(`
-          INSERT INTO assignments (person_id, item_type, item_id, item_name, item_value) 
-          VALUES ($1, $2, $3, $4, $5) 
-          RETURNING id, person_id, item_type, item_id, item_name, item_value, assigned_at
-        `, [personId, itemType, itemId, itemName, itemValue]);
-        
+          INSERT INTO assignments (person_id, action_id, action_name, action_value) 
+          VALUES ($1, $2, $3, $4) 
+          RETURNING id, person_id, action_id, action_name, action_value, assigned_at
+        `, [personId, itemId, itemName, itemValue]);
+
         assignments.push(result.rows[0]);
       }
-      
+
       return assignments;
     });
   }
@@ -179,7 +191,7 @@ class AssignmentRepository {
       SELECT 
         p.id as person_id,
         p.name as person_name,
-        COALESCE(SUM(a.item_value), 0) as total_score,
+        COALESCE(SUM(a.action_value), 0) as total_score,
         COUNT(a.id) as assignment_count
       FROM persons p
       LEFT JOIN assignments a ON p.id = a.person_id
@@ -204,15 +216,15 @@ class AssignmentRepository {
       weekStart.setDate(now.getDate() - daysToMonday);
       weekStart.setHours(0, 0, 0, 0);
     }
-    
+
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
-    
+
     const result = await query(`
       SELECT 
         p.id as person_id,
         p.name as person_name,
-        COALESCE(SUM(a.item_value), 0) as weekly_score,
+        COALESCE(SUM(a.action_value), 0) as weekly_score,
         COUNT(a.id) as weekly_assignment_count,
         $1::timestamp as week_start,
         $2::timestamp as week_end
@@ -223,7 +235,7 @@ class AssignmentRepository {
       GROUP BY p.id, p.name
       ORDER BY weekly_score DESC, p.name ASC
     `, [weekStart, weekEnd]);
-    
+
     return result.rows;
   }
 
@@ -237,14 +249,14 @@ class AssignmentRepository {
       SELECT 
         p.id as person_id,
         p.name as person_name,
-        COALESCE(SUM(a.item_value), 0) as total_score,
+        COALESCE(SUM(a.action_value), 0) as total_score,
         COUNT(a.id) as assignment_count
       FROM persons p
       LEFT JOIN assignments a ON p.id = a.person_id
       WHERE p.id = $1
       GROUP BY p.id, p.name
     `, [personId]);
-    
+
     return result.rows[0] || null;
   }
 
@@ -264,15 +276,15 @@ class AssignmentRepository {
       weekStart.setDate(now.getDate() - daysToMonday);
       weekStart.setHours(0, 0, 0, 0);
     }
-    
+
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 7);
-    
+
     const result = await query(`
       SELECT 
         p.id as person_id,
         p.name as person_name,
-        COALESCE(SUM(a.item_value), 0) as weekly_score,
+        COALESCE(SUM(a.action_value), 0) as weekly_score,
         COUNT(a.id) as weekly_assignment_count,
         $2::timestamp as week_start,
         $3::timestamp as week_end
@@ -283,7 +295,7 @@ class AssignmentRepository {
       WHERE p.id = $1
       GROUP BY p.id, p.name
     `, [personId, weekStart, weekEnd]);
-    
+
     return result.rows[0] || null;
   }
 
@@ -295,14 +307,14 @@ class AssignmentRepository {
     const result = await query(`
       SELECT 
         COUNT(*) as total_assignments,
-        COUNT(CASE WHEN item_type = 'reward' THEN 1 END) as reward_assignments,
-        COUNT(CASE WHEN item_type = 'punishment' THEN 1 END) as punishment_assignments,
-        AVG(item_value) as average_value,
-        SUM(CASE WHEN item_value > 0 THEN item_value ELSE 0 END) as total_rewards,
-        SUM(CASE WHEN item_value < 0 THEN ABS(item_value) ELSE 0 END) as total_punishments
+        COUNT(CASE WHEN action_value > 0 THEN 1 END) as reward_assignments,
+        COUNT(CASE WHEN action_value < 0 THEN 1 END) as punishment_assignments,
+        AVG(action_value) as average_value,
+        SUM(CASE WHEN action_value > 0 THEN action_value ELSE 0 END) as total_rewards,
+        SUM(CASE WHEN action_value < 0 THEN ABS(action_value) ELSE 0 END) as total_punishments
       FROM assignments
     `);
-    
+
     return result.rows[0];
   }
 
@@ -316,30 +328,34 @@ class AssignmentRepository {
    */
   async findByDateRange(startDate, endDate, options = {}) {
     const { limit } = options;
-    
+
     let queryText = `
       SELECT 
         a.id, 
         a.person_id, 
-        a.item_type, 
-        a.item_id, 
-        a.item_name, 
-        a.item_value, 
+        a.action_id, 
+        a.action_name, 
+        a.action_value, 
         a.assigned_at,
-        p.name as person_name
+        p.name as person_name,
+        -- Legacy compatibility fields
+        CASE WHEN a.action_value > 0 THEN 'reward' ELSE 'punishment' END as item_type,
+        a.action_id as item_id,
+        a.action_name as item_name,
+        a.action_value as item_value
       FROM assignments a
       JOIN persons p ON a.person_id = p.id
       WHERE a.assigned_at >= $1 AND a.assigned_at <= $2
       ORDER BY a.assigned_at DESC
     `;
-    
+
     const params = [startDate, endDate];
-    
+
     if (limit) {
       queryText += ' LIMIT $3';
       params.push(limit);
     }
-    
+
     const result = await query(queryText, params);
     return result.rows;
   }
