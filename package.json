@@ -1,0 +1,45 @@
+{
+  "name": "reward-punishment-system",
+  "version": "1.0.0",
+  "description": "Complete reward and punishment management system with web interface",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd reward-punishment-web && npm start",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm install --production",
+    "build:frontend": "cd reward-punishment-web && npm run build",
+    "start": "npm run start:backend",
+    "start:backend": "cd backend && npm start",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd reward-punishment-web && npm test -- --watchAll=false",
+    "deploy": "./deploy.sh",
+    "health": "./health-check.sh",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up -d --build",
+    "integration-test": "node integration-test.js"
+  },
+  "keywords": [
+    "reward",
+    "punishment",
+    "management",
+    "system",
+    "react",
+    "nodejs",
+    "express",
+    "sqlite"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

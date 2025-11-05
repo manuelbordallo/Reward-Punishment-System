@@ -1,0 +1,36 @@
+{
+    "name": "reward-punishment-backend",
+    "version": "1.0.0",
+    "description": "Backend API for reward and punishment management system",
+    "main": "src/index.js",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js",
+        "test": "jest",
+        "test:watch": "jest --watch",
+        "migrate": "node scripts/migrate.js",
+        "migrate:reset": "node scripts/migrate.js reset",
+        "init-db": "node scripts/init-db.js"
+    },
+    "keywords": [
+        "rewards",
+        "punishments",
+        "management",
+        "api"
+    ],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^16.6.1",
+        "express": "^4.21.2",
+        "joi": "^17.13.3",
+        "pg": "^8.16.3",
+        "sqlite3": "^5.1.7"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0",
+        "nodemon": "^3.1.10",
+        "supertest": "^6.3.4"
+    }
+}

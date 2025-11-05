@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: reward-punishment-backend
+    env: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USE_SQLITE
+        value: "true"
+      - key: PORT
+        value: "10000"
+    
+  - type: web
+    name: reward-punishment-frontend
+    env: node
+    buildCommand: cd reward-punishment-web && npm install && npm run build
+    startCommand: cd reward-punishment-web && npx serve -s build -l $PORT
+    envVars:
+      - key: NODE_ENV
+        value: production
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://reward-punishment-backend.onrender.com/api/*

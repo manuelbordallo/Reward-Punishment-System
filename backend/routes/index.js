@@ -1,0 +1,39 @@
+const express = require('express');
+const personRoutes = require('./personRoutes');
+const rewardRoutes = require('./rewardRoutes');
+const punishmentRoutes = require('./punishmentRoutes');
+const assignmentRoutes = require('./assignmentRoutes');
+const scoreRoutes = require('./scoreRoutes');
+const { logger } = require('../utils/logger');
+
+const router = express.Router();
+
+// API root endpoint - provides information about available endpoints
+router.get('/', (req, res) => {
+  logger.info('API root endpoint accessed');
+  res.json({
+    success: true,
+    message: 'Reward-Punishment System API',
+    version: '1.0.0',
+    endpoints: {
+      persons: '/api/persons',
+      rewards: '/api/rewards', 
+      punishments: '/api/punishments',
+      assignments: '/api/assignments',
+      scores: '/api/scores'
+    },
+    documentation: {
+      health: '/health',
+      apiRoot: '/api'
+    }
+  });
+});
+
+// Mount all route modules
+router.use('/persons', personRoutes);
+router.use('/rewards', rewardRoutes);
+router.use('/punishments', punishmentRoutes);
+router.use('/assignments', assignmentRoutes);
+router.use('/scores', scoreRoutes);
+
+module.exports = router;
