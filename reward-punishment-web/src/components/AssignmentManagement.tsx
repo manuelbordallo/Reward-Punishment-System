@@ -144,7 +144,7 @@ const AssignmentManagement: React.FC = () => {
           <div className="form-group">
             <label>Select Persons:</label>
             <div className="person-selection">
-              {Array.isArray(persons) && persons.map((person) => (
+              {(Array.isArray(persons) && persons.map((person) => (
                 <label key={person.id} className="person-checkbox">
                   <input
                     type="checkbox"
@@ -153,7 +153,7 @@ const AssignmentManagement: React.FC = () => {
                   />
                   {person.name}
                 </label>
-              )) || <p>No persons available</p>}
+              ))) || <p>No persons available</p>}
             </div>
           </div>
 
@@ -172,12 +172,12 @@ const AssignmentManagement: React.FC = () => {
       ) : (
         <div>
           <h3>Assignment History ({assignments.length})</h3>
-          {Array.isArray(assignments) && assignments.map((assignment) => (
+          {(Array.isArray(assignments) && assignments.map((assignment) => (
             <div key={assignment.id} className="list-item">
               <div>
                 <strong>{assignment.person_name}</strong> - {assignment.item_name}
-                <span style={{ color: assignment.item_value && assignment.item_value > 0 ? 'green' : 'red' }}>
-                  ({assignment.item_value && assignment.item_value > 0 ? '+' : ''}{assignment.item_value} points)
+                <span style={{ color: (assignment.item_value && assignment.item_value > 0) ? 'green' : 'red' }}>
+                  ({(assignment.item_value && assignment.item_value > 0) ? '+' : ''}{assignment.item_value} points)
                 </span>
                 <br />
                 <small>{new Date(assignment.assigned_at).toLocaleString()}</small>
@@ -189,7 +189,7 @@ const AssignmentManagement: React.FC = () => {
                 Delete
               </button>
             </div>
-          )) || <p>No assignments found</p>}
+          ))) || <p>No assignments found</p>}
         </div>
       )}
     </div>
