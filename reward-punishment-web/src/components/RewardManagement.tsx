@@ -155,7 +155,7 @@ const RewardManagement: React.FC = () => {
       ) : (
         <div>
           <h3>Rewards ({rewards.length})</h3>
-          {Array.isArray(rewards) && rewards.map((reward) => (
+          {(Array.isArray(rewards) && rewards.map((reward) => (
             <div key={reward.id} className="list-item">
               <span>{reward.name} (+{reward.value} points)</span>
               <div>
@@ -173,7 +173,7 @@ const RewardManagement: React.FC = () => {
                 </button>
               </div>
             </div>
-          )) || <p>No rewards found</p>}
+          ))) || <p>No rewards found</p>}
         </div>
       )}
     </div>

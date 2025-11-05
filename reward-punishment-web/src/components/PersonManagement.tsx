@@ -81,14 +81,14 @@ const PersonManagement: React.FC = () => {
   return (
     <div className="section">
       <h2>Person Management</h2>
-      
+
       {error && (
         <div className="error">
           {error}
           <button onClick={clearMessages} style={{ float: 'right' }}>×</button>
         </div>
       )}
-      
+
       {success && (
         <div className="success">
           {success}
@@ -131,25 +131,25 @@ const PersonManagement: React.FC = () => {
       ) : (
         <div>
           <h3>Persons ({persons.length})</h3>
-          {Array.isArray(persons) && persons.map((person) => (
+          {(Array.isArray(persons) && persons.map((person) => (
             <div key={person.id} className="list-item">
               <span>{person.name}</span>
               <div>
-                <button 
-                  className="btn btn-primary" 
+                <button
+                  className="btn btn-primary"
                   onClick={() => setEditingPerson(person)}
                 >
                   Edit
                 </button>
-                <button 
-                  className="btn btn-danger" 
+                <button
+                  className="btn btn-danger"
                   onClick={() => handleDelete(person.id)}
                 >
                   Delete
                 </button>
               </div>
             </div>
-          )) || <p>No persons found</p>}
+          ))) || <p>No persons found</p>}
         </div>
       )}
     </div>

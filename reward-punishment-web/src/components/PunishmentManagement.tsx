@@ -155,7 +155,7 @@ const PunishmentManagement: React.FC = () => {
       ) : (
         <div>
           <h3>Punishments ({punishments.length})</h3>
-          {Array.isArray(punishments) && punishments.map((punishment) => (
+          {(Array.isArray(punishments) && punishments.map((punishment) => (
             <div key={punishment.id} className="list-item">
               <span>{punishment.name} ({punishment.value} points)</span>
               <div>
@@ -173,7 +173,7 @@ const PunishmentManagement: React.FC = () => {
                 </button>
               </div>
             </div>
-          )) || <p>No punishments found</p>}
+          ))) || <p>No punishments found</p>}
         </div>
       )}
     </div>
