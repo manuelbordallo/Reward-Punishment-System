@@ -1,4 +1,32 @@
 import React, { useState, useEffect } from 'react';
+import {
+    Box,
+    Typography,
+    Card,
+    CardContent,
+    Button,
+    Alert,
+    CircularProgress,
+    Chip,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemIcon,
+    Avatar,
+    Divider,
+    ToggleButton,
+    ToggleButtonGroup
+} from '@mui/material';
+import {
+    Leaderboard,
+    TrendingUp,
+    TrendingDown,
+    EmojiEvents,
+    Refresh,
+    Person,
+    CalendarToday,
+    Assessment
+} from '@mui/icons-material';
 import { Score, WeeklyScore } from '../types';
 import { scoreApi } from '../services/api';
 
@@ -32,11 +60,7 @@ const ScoreView: React.FC = () => {
 
     const clearError = () => setError('');
 
-    const getScoreClass = (score: number) => {
-        if (score > 0) return 'score-positive';
-        if (score < 0) return 'score-negative';
-        return 'score-zero';
-    };
+
 
     const getRankEmoji = (index: number) => {
         switch (index) {
@@ -48,113 +72,196 @@ const ScoreView: React.FC = () => {
     };
 
     return (
-        <div className="section">
-            <h2>Scoreboard</h2>
+        <Box>
+            <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Leaderboard color="primary" />
+                Scoreboard
+            </Typography>
 
             {error && (
-                <div className="error">
+                <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
                     {error}
-                    <button onClick={clearError} style={{ float: 'right' }}>×</button>
-                </div>
+                </Alert>
             )}
 
-            <div className="form-group">
-                <label>View Type:</label>
-                <select
-                    value={viewType}
-                    onChange={(e) => setViewType(e.target.value as 'total' | 'weekly')}
-                >
-                    <option value="total">Total Scores</option>
-                    <option value="weekly">Weekly Scores</option>
-                </select>
-            </div>
+            {/* Controls */}
+            <Card sx={{ mb: 3 }}>
+                <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+                        <ToggleButtonGroup
+                            value={viewType}
+                            exclusive
+                            onChange={(e, newValue) => newValue && setViewType(newValue)}
+                            aria-label="view type"
+                        >
+                            <ToggleButton value="total" aria-label="total scores">
+                                <Assessment sx={{ mr: 1 }} />
+                                Total Scores
+                            </ToggleButton>
+                            <ToggleButton value="weekly" aria-label="weekly scores">
+                                <CalendarToday sx={{ mr: 1 }} />
+                                Weekly Scores
+                            </ToggleButton>
+                        </ToggleButtonGroup>
 
-            <button className="btn btn-primary" onClick={loadScores}>
-                Refresh Scores
-            </button>
+                        <Button
+                            variant="outlined"
+                            startIcon={<Refresh />}
+                            onClick={loadScores}
+                            disabled={loading}
+                        >
+                            Refresh
+                        </Button>
+                    </Box>
+                </CardContent>
+            </Card>
 
             {loading ? (
-                <div className="loading">Loading scores...</div>
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress size={60} />
+                </Box>
             ) : (
-                <div>
-                    {viewType === 'total' ? (
-                        <div>
-                            <h3>Total Scores ({totalScores.length} persons)</h3>
-                            {totalScores.length === 0 ? (
-                                <p>No scores available. Create some assignments first!</p>
-                            ) : (
-                                totalScores.map((score, index) => (
-                                    <div key={score.personId} className={`score-item ${getScoreClass(score.totalScore)}`}>
-                                        <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '1.2em', fontWeight: 'bold' }}>
-                                                    {getRankEmoji(index)}
-                                                </span>
-                                                <span style={{ fontSize: '1.1em', fontWeight: 'bold' }}>
-                                                    {score.personName}
-                                                </span>
-                                            </div>
-                                            <div style={{ fontSize: '0.9em', color: '#666', marginTop: '5px' }}>
-                                                Assignments: {score.assignmentCount} | Average: {score.averageScore}
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{
-                                                fontSize: '1.5em',
-                                                fontWeight: 'bold',
-                                                color: score.totalScore > 0 ? '#28a745' : score.totalScore < 0 ? '#dc3545' : '#6c757d'
-                                            }}>
-                                                {score.totalScore > 0 ? '+' : ''}{score.totalScore}
-                                            </div>
-                                            <div style={{ fontSize: '0.8em', color: '#666' }}>
-                                                points
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    ) : (
-                        <div>
-                            <h3>Weekly Scores ({weeklyScores.length} persons)</h3>
-                            {weeklyScores.length === 0 ? (
-                                <p>No weekly scores available. Create some assignments first!</p>
-                            ) : (
-                                weeklyScores.map((score, index) => (
-                                    <div key={score.personId} className={`score-item ${getScoreClass(score.weeklyScore)}`}>
-                                        <div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '1.2em', fontWeight: 'bold' }}>
-                                                    {getRankEmoji(index)}
-                                                </span>
-                                                <span style={{ fontSize: '1.1em', fontWeight: 'bold' }}>
-                                                    {score.personName}
-                                                </span>
-                                            </div>
-                                            <div style={{ fontSize: '0.9em', color: '#666', marginTop: '5px' }}>
-                                                Weekly assignments: {score.weeklyAssignmentCount} | Average: {score.averageWeeklyScore}
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{
-                                                fontSize: '1.5em',
-                                                fontWeight: 'bold',
-                                                color: score.weeklyScore > 0 ? '#28a745' : score.weeklyScore < 0 ? '#dc3545' : '#6c757d'
-                                            }}>
-                                                {score.weeklyScore > 0 ? '+' : ''}{score.weeklyScore}
-                                            </div>
-                                            <div style={{ fontSize: '0.8em', color: '#666' }}>
-                                                points
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-                </div>
+                <Card>
+                    <CardContent>
+                        {viewType === 'total' ? (
+                            <>
+                                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <EmojiEvents color="warning" />
+                                    Total Scores ({totalScores.length} persons)
+                                </Typography>
+                                {totalScores.length === 0 ? (
+                                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                                        <Assessment color="disabled" sx={{ fontSize: 48, mb: 2 }} />
+                                        <Typography color="textSecondary">
+                                            No scores available. Create some assignments first!
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <List>
+                                        {totalScores.map((score, index) => (
+                                            <React.Fragment key={score.personId}>
+                                                <ListItem sx={{ py: 2 }}>
+                                                    <ListItemIcon>
+                                                        <Avatar
+                                                            sx={{
+                                                                bgcolor: index < 3 ? 'warning.main' : 'primary.main',
+                                                                width: 48,
+                                                                height: 48,
+                                                                fontSize: '1.2rem'
+                                                            }}
+                                                        >
+                                                            {getRankEmoji(index)}
+                                                        </Avatar>
+                                                    </ListItemIcon>
+                                                    <ListItemText
+                                                        primary={
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <Typography variant="h6">
+                                                                    {score.personName}
+                                                                </Typography>
+                                                                <Chip
+                                                                    icon={score.totalScore > 0 ? <TrendingUp /> : score.totalScore < 0 ? <TrendingDown /> : <Person />}
+                                                                    label={`${score.totalScore > 0 ? '+' : ''}${score.totalScore} points`}
+                                                                    color={score.totalScore > 0 ? 'success' : score.totalScore < 0 ? 'error' : 'default'}
+                                                                    sx={{ fontWeight: 'bold' }}
+                                                                />
+                                                            </Box>
+                                                        }
+                                                        secondary={
+                                                            <Box sx={{ mt: 1 }}>
+                                                                <Chip
+                                                                    label={`${score.assignmentCount} assignments`}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    sx={{ mr: 1 }}
+                                                                />
+                                                                <Chip
+                                                                    label={`${score.averageScore} avg`}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                />
+                                                            </Box>
+                                                        }
+                                                    />
+                                                </ListItem>
+                                                {index < totalScores.length - 1 && <Divider />}
+                                            </React.Fragment>
+                                        ))}
+                                    </List>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <CalendarToday color="info" />
+                                    Weekly Scores ({weeklyScores.length} persons)
+                                </Typography>
+                                {weeklyScores.length === 0 ? (
+                                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                                        <CalendarToday color="disabled" sx={{ fontSize: 48, mb: 2 }} />
+                                        <Typography color="textSecondary">
+                                            No weekly scores available. Create some assignments first!
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <List>
+                                        {weeklyScores.map((score, index) => (
+                                            <React.Fragment key={score.personId}>
+                                                <ListItem sx={{ py: 2 }}>
+                                                    <ListItemIcon>
+                                                        <Avatar
+                                                            sx={{
+                                                                bgcolor: index < 3 ? 'info.main' : 'secondary.main',
+                                                                width: 48,
+                                                                height: 48,
+                                                                fontSize: '1.2rem'
+                                                            }}
+                                                        >
+                                                            {getRankEmoji(index)}
+                                                        </Avatar>
+                                                    </ListItemIcon>
+                                                    <ListItemText
+                                                        primary={
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                <Typography variant="h6">
+                                                                    {score.personName}
+                                                                </Typography>
+                                                                <Chip
+                                                                    icon={score.weeklyScore > 0 ? <TrendingUp /> : score.weeklyScore < 0 ? <TrendingDown /> : <Person />}
+                                                                    label={`${score.weeklyScore > 0 ? '+' : ''}${score.weeklyScore} points`}
+                                                                    color={score.weeklyScore > 0 ? 'success' : score.weeklyScore < 0 ? 'error' : 'default'}
+                                                                    sx={{ fontWeight: 'bold' }}
+                                                                />
+                                                            </Box>
+                                                        }
+                                                        secondary={
+                                                            <Box sx={{ mt: 1 }}>
+                                                                <Chip
+                                                                    label={`${score.weeklyAssignmentCount} weekly assignments`}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    sx={{ mr: 1 }}
+                                                                />
+                                                                <Chip
+                                                                    label={`${score.averageWeeklyScore} avg`}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                />
+                                                            </Box>
+                                                        }
+                                                    />
+                                                </ListItem>
+                                                {index < weeklyScores.length - 1 && <Divider />}
+                                            </React.Fragment>
+                                        ))}
+                                    </List>
+                                )}
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
             )}
-        </div>
+        </Box>
     );
 };
 

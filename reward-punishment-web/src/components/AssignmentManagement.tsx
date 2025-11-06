@@ -1,4 +1,42 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  CircularProgress,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Checkbox,
+  FormControlLabel,
+  Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  TrendingUp,
+  TrendingDown,
+  Assignment as AssignmentIcon,
+  Delete,
+  CheckCircle,
+  Warning
+} from '@mui/icons-material';
 import { Person, Reward, Punishment, Action, Assignment } from '../types';
 import { personApi, rewardApi, punishmentApi, actionApi, assignmentApi } from '../services/api';
 
@@ -135,147 +173,247 @@ const AssignmentManagement: React.FC = () => {
   const currentItems = getCurrentItems();
 
   return (
-    <div className="section">
-      <h2>Assignment Management</h2>
+    <Box>
+      <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <AssignmentIcon color="primary" />
+        Assignment Management
+      </Typography>
 
       {error && (
-        <div className="error">
+        <Alert severity="error" sx={{ mb: 2 }} onClose={clearMessages}>
           {error}
-          <button onClick={clearMessages} style={{ float: 'right' }}>×</button>
-        </div>
+        </Alert>
       )}
 
       {success && (
-        <div className="success">
+        <Alert severity="success" sx={{ mb: 2 }} onClose={clearMessages}>
           {success}
-          <button onClick={clearMessages} style={{ float: 'right' }}>×</button>
-        </div>
+        </Alert>
       )}
 
-      <div className="assignment-form">
-        <h3>Create New Assignment</h3>
+      {/* System Toggle */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={useActions}
+                onChange={(e) => {
+                  setUseActions(e.target.checked);
+                  setItemType(e.target.checked ? 'action' : 'reward');
+                  setSelectedItemId(0);
+                }}
+                color="primary"
+              />
+            }
+            label={
+              <Box>
+                <Typography variant="body1">
+                  Use new Actions system (recommended)
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  {useActions
+                    ? 'Using unified actions system - manage rewards and punishments together'
+                    : 'Using legacy system - separate rewards and punishments'}
+                </Typography>
+              </Box>
+            }
+          />
+        </CardContent>
+      </Card>
 
-        {/* System Toggle */}
-        <div className="form-group" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e7f3ff', borderRadius: '8px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <input
-              type="checkbox"
-              checked={useActions}
-              onChange={(e) => {
-                setUseActions(e.target.checked);
-                setItemType(e.target.checked ? 'action' : 'reward');
-                setSelectedItemId(0);
-              }}
-            />
-            Use new Actions system (recommended)
-          </label>
-          <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
-            {useActions
-              ? 'Using unified actions system - manage rewards and punishments together'
-              : 'Using legacy system - separate rewards and punishments'}
-          </small>
-        </div>
+      {/* Create Assignment Form */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Create New Assignment
+          </Typography>
 
-        <form onSubmit={handleAssign}>
-          <div className="form-group">
-            <label>Select Type:</label>
-            <select
-              value={itemType}
-              onChange={(e) => {
-                setItemType(e.target.value as 'reward' | 'punishment' | 'action');
-                setSelectedItemId(0);
-              }}
-            >
-              {useActions ? (
-                <>
-                  <option value="action">All Actions</option>
-                  <option value="reward">Rewards Only</option>
-                  <option value="punishment">Punishments Only</option>
-                </>
-              ) : (
-                <>
-                  <option value="reward">Reward</option>
-                  <option value="punishment">Punishment</option>
-                </>
-              )}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label>
-              Select {useActions ? (itemType === 'action' ? 'Action' : itemType) : itemType}:
-            </label>
-            <select
-              value={selectedItemId}
-              onChange={(e) => setSelectedItemId(parseInt(e.target.value))}
-              required
-            >
-              <option value={0}>
-                Choose {useActions ? (itemType === 'action' ? 'an action' : `a ${itemType}`) : `a ${itemType}`}...
-              </option>
-              {currentItems.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} ({item.value > 0 ? '+' : ''}{item.value} points)
-                  {useActions && 'type' in item && (
-                    ` • ${item.type === 'positive' ? 'Reward' : 'Punishment'}`
+          <Box component="form" onSubmit={handleAssign} sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+              {/* Type Selection */}
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>Type</InputLabel>
+                <Select
+                  value={itemType}
+                  label="Type"
+                  onChange={(e) => {
+                    setItemType(e.target.value as 'reward' | 'punishment' | 'action');
+                    setSelectedItemId(0);
+                  }}
+                >
+                  {useActions ? (
+                    <>
+                      <MenuItem value="action">All Actions</MenuItem>
+                      <MenuItem value="reward">Rewards Only</MenuItem>
+                      <MenuItem value="punishment">Punishments Only</MenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <MenuItem value="reward">Reward</MenuItem>
+                      <MenuItem value="punishment">Punishment</MenuItem>
+                    </>
                   )}
-                </option>
-              ))}
-            </select>
-          </div>
+                </Select>
+              </FormControl>
 
-          <div className="form-group">
-            <label>Select Persons:</label>
-            <div className="person-selection">
-              {(Array.isArray(persons) && persons.map((person) => (
-                <label key={person.id} className="person-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedPersons.includes(person.id)}
-                    onChange={() => handlePersonToggle(person.id)}
-                  />
-                  {person.name}
-                </label>
-              ))) || <p>No persons available</p>}
-            </div>
-          </div>
+              {/* Item Selection */}
+              <FormControl sx={{ minWidth: 300, flex: 1 }}>
+                <InputLabel>
+                  {useActions ? (itemType === 'action' ? 'Action' : itemType) : itemType}
+                </InputLabel>
+                <Select
+                  value={selectedItemId}
+                  label={useActions ? (itemType === 'action' ? 'Action' : itemType) : itemType}
+                  onChange={(e) => setSelectedItemId(Number(e.target.value))}
+                  required
+                >
+                  <MenuItem value={0}>
+                    Choose {useActions ? (itemType === 'action' ? 'an action' : `a ${itemType}`) : `a ${itemType}`}...
+                  </MenuItem>
+                  {currentItems.map((item) => (
+                    <MenuItem key={item.id} value={item.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                        {useActions && 'type' in item && (
+                          item.type === 'positive' ? <TrendingUp color="success" /> : <TrendingDown color="error" />
+                        )}
+                        <Box sx={{ flex: 1 }}>
+                          {item.name}
+                          <Chip
+                            label={`${item.value > 0 ? '+' : ''}${item.value} points`}
+                            size="small"
+                            color={item.value > 0 ? 'success' : 'error'}
+                            sx={{ ml: 1 }}
+                          />
+                          {useActions && 'type' in item && (
+                            <Chip
+                              label={item.type === 'positive' ? 'Reward' : 'Punishment'}
+                              size="small"
+                              variant="outlined"
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={selectedPersons.length === 0 || selectedItemId === 0}
-          >
-            Create Assignment
-          </button>
-        </form>
-      </div>
+            {/* Person Selection */}
+            <Typography variant="subtitle1" gutterBottom>
+              Select Persons:
+            </Typography>
+            <Card variant="outlined" sx={{ mb: 3, maxHeight: 200, overflow: 'auto' }}>
+              <List dense>
+                {Array.isArray(persons) && persons.length > 0 ? (
+                  persons.map((person) => (
+                    <ListItem key={person.id} dense>
+                      <ListItemIcon>
+                        <Checkbox
+                          edge="start"
+                          checked={selectedPersons.includes(person.id)}
+                          onChange={() => handlePersonToggle(person.id)}
+                        />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={person.name}
+                        secondary={`ID: ${person.id}`}
+                      />
+                    </ListItem>
+                  ))
+                ) : (
+                  <ListItem>
+                    <ListItemText primary="No persons available" />
+                  </ListItem>
+                )}
+              </List>
+            </Card>
 
-      {loading ? (
-        <div className="loading">Loading assignments...</div>
-      ) : (
-        <div>
-          <h3>Assignment History ({assignments.length})</h3>
-          {(Array.isArray(assignments) && assignments.map((assignment) => (
-            <div key={assignment.id} className="list-item">
-              <div>
-                <strong>{assignment.person_name}</strong> - {assignment.item_name}
-                <span style={{ color: (assignment.item_value && assignment.item_value > 0) ? 'green' : 'red' }}>
-                  ({(assignment.item_value && assignment.item_value > 0) ? '+' : ''}{assignment.item_value} points)
-                </span>
-                <br />
-                <small>{new Date(assignment.assigned_at).toLocaleString()}</small>
-              </div>
-              <button
-                className="btn btn-danger"
-                onClick={() => handleDeleteAssignment(assignment.id)}
-              >
-                Delete
-              </button>
-            </div>
-          ))) || <p>No assignments found</p>}
-        </div>
-      )}
-    </div>
+            <Button
+              type="submit"
+              variant="contained"
+              startIcon={<CheckCircle />}
+              disabled={selectedPersons.length === 0 || selectedItemId === 0}
+              size="large"
+            >
+              Create Assignment
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Assignment History */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AssignmentIcon />
+            Assignment History ({assignments.length})
+          </Typography>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : Array.isArray(assignments) && assignments.length > 0 ? (
+            <TableContainer component={Paper} elevation={0}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Person</TableCell>
+                    <TableCell>Action</TableCell>
+                    <TableCell>Points</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {assignments.map((assignment) => (
+                    <TableRow key={assignment.id} hover>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <PersonIcon fontSize="small" />
+                          {assignment.person_name}
+                        </Box>
+                      </TableCell>
+                      <TableCell>{assignment.item_name}</TableCell>
+                      <TableCell>
+                        <Chip
+                          icon={assignment.item_value && assignment.item_value > 0 ? <TrendingUp /> : <TrendingDown />}
+                          label={`${assignment.item_value && assignment.item_value > 0 ? '+' : ''}${assignment.item_value} points`}
+                          color={assignment.item_value && assignment.item_value > 0 ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {new Date(assignment.assigned_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteAssignment(assignment.id)}
+                          color="error"
+                        >
+                          <Delete />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Warning color="disabled" sx={{ fontSize: 48, mb: 2 }} />
+              <Typography color="textSecondary">
+                No assignments found. Create your first assignment above.
+              </Typography>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 
