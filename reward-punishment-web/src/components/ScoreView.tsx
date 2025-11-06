@@ -27,7 +27,7 @@ import {
     CalendarToday,
     Assessment
 } from '@mui/icons-material';
-import { Score, WeeklyScore } from '../types';
+import { Score, WeeklyScore } from '../types/index';
 import { scoreApi } from '../services/api';
 
 const ScoreView: React.FC = () => {
@@ -44,23 +44,32 @@ const ScoreView: React.FC = () => {
     const loadScores = async () => {
         try {
             setLoading(true);
+            setError('');
+
             if (viewType === 'total') {
                 const response = await scoreApi.getTotal();
+                console.log('Total scores response:', response.data);
                 setTotalScores(response.data.data || []);
             } else {
                 const response = await scoreApi.getWeekly();
-                setWeeklyScores(response.data.data || []);
+                console.log('Weekly scores full response:', response);
+                console.log('Weekly scores response.data:', response.data);
+                console.log('Weekly scores response.data.data:', response.data.data);
+                console.log('Weekly scores response.data.success:', response.data.success);
+
+                const weeklyData = response.data.data || [];
+                console.log('Setting weekly scores to:', weeklyData);
+                setWeeklyScores(weeklyData);
             }
         } catch (err) {
-            setError('Failed to load scores');
+            console.error('Error loading scores:', err);
+            setError(`Failed to load ${viewType} scores: ${err instanceof Error ? err.message : 'Unknown error'}`);
         } finally {
             setLoading(false);
         }
     };
 
     const clearError = () => setError('');
-
-
 
     const getRankEmoji = (index: number) => {
         switch (index) {
@@ -104,14 +113,35 @@ const ScoreView: React.FC = () => {
                             </ToggleButton>
                         </ToggleButtonGroup>
 
-                        <Button
-                            variant="outlined"
-                            startIcon={<Refresh />}
-                            onClick={loadScores}
-                            disabled={loading}
-                        >
-                            Refresh
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                variant="outlined"
+                                startIcon={<Refresh />}
+                                onClick={loadScores}
+                                disabled={loading}
+                            >
+                                Refresh
+                            </Button>
+                            {process.env.NODE_ENV === 'development' && (
+                                <Button
+                                    variant="outlined"
+                                    color="secondary"
+                                    onClick={async () => {
+                                        try {
+                                            const response = await fetch('/api/scores/weekly');
+                                            const data = await response.json();
+                                            console.log('Raw API Response:', data);
+                                            alert(`API Response: ${JSON.stringify(data, null, 2)}`);
+                                        } catch (err) {
+                                            console.error('API Test Error:', err);
+                                            alert(`API Error: ${err}`);
+                                        }
+                                    }}
+                                >
+                                    Test API
+                                </Button>
+                            )}
+                        </Box>
                     </Box>
                 </CardContent>
             </Card>
@@ -192,15 +222,25 @@ const ScoreView: React.FC = () => {
                             </>
                         ) : (
                             <>
-                                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <CalendarToday color="info" />
-                                    Weekly Scores ({weeklyScores.length} persons)
-                                </Typography>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <CalendarToday color="info" />
+                                        Weekly Scores ({weeklyScores.length} persons)
+                                    </Typography>
+                                    {weeklyScores.length > 0 && weeklyScores.every(s => s.weeklyScore === 0) && (
+                                        <Alert severity="info" sx={{ mb: 2 }}>
+                                            All persons have 0 points for this week. Create some assignments to see scores!
+                                        </Alert>
+                                    )}
+                                </Box>
                                 {weeklyScores.length === 0 ? (
                                     <Box sx={{ textAlign: 'center', py: 4 }}>
                                         <CalendarToday color="disabled" sx={{ fontSize: 48, mb: 2 }} />
-                                        <Typography color="textSecondary">
-                                            No weekly scores available. Create some assignments first!
+                                        <Typography color="textSecondary" gutterBottom>
+                                            No persons found for weekly scores.
+                                        </Typography>
+                                        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                                            This might indicate an issue with the API or database connection.
                                         </Typography>
                                     </Box>
                                 ) : (
@@ -227,9 +267,9 @@ const ScoreView: React.FC = () => {
                                                                     {score.personName}
                                                                 </Typography>
                                                                 <Chip
-                                                                    icon={score.weeklyScore > 0 ? <TrendingUp /> : score.weeklyScore < 0 ? <TrendingDown /> : <Person />}
-                                                                    label={`${score.weeklyScore > 0 ? '+' : ''}${score.weeklyScore} points`}
-                                                                    color={score.weeklyScore > 0 ? 'success' : score.weeklyScore < 0 ? 'error' : 'default'}
+                                                                    icon={(score.weeklyScore || 0) > 0 ? <TrendingUp /> : (score.weeklyScore || 0) < 0 ? <TrendingDown /> : <Person />}
+                                                                    label={`${(score.weeklyScore || 0) > 0 ? '+' : ''}${score.weeklyScore || 0} points`}
+                                                                    color={(score.weeklyScore || 0) > 0 ? 'success' : (score.weeklyScore || 0) < 0 ? 'error' : 'default'}
                                                                     sx={{ fontWeight: 'bold' }}
                                                                 />
                                                             </Box>
@@ -237,16 +277,25 @@ const ScoreView: React.FC = () => {
                                                         secondary={
                                                             <Box sx={{ mt: 1 }}>
                                                                 <Chip
-                                                                    label={`${score.weeklyAssignmentCount} weekly assignments`}
+                                                                    label={`${score.weeklyAssignmentCount || 0} weekly assignments`}
                                                                     size="small"
                                                                     variant="outlined"
                                                                     sx={{ mr: 1 }}
                                                                 />
                                                                 <Chip
-                                                                    label={`${score.averageWeeklyScore} avg`}
+                                                                    label={`${score.averageWeeklyScore || 0} avg`}
                                                                     size="small"
                                                                     variant="outlined"
                                                                 />
+                                                                {process.env.NODE_ENV === 'development' && (
+                                                                    <Chip
+                                                                        label={`Week: ${new Date(score.weekStart).toLocaleDateString()} - ${new Date(score.weekEnd).toLocaleDateString()}`}
+                                                                        size="small"
+                                                                        color="info"
+                                                                        variant="outlined"
+                                                                        sx={{ ml: 1 }}
+                                                                    />
+                                                                )}
                                                             </Box>
                                                         }
                                                     />

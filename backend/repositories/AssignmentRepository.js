@@ -226,16 +226,15 @@ class AssignmentRepository {
         p.name as person_name,
         COALESCE(SUM(a.action_value), 0) as weekly_score,
         COUNT(a.id) as weekly_assignment_count,
-        $1::timestamp as week_start,
-        $2::timestamp as week_end
+        ? as week_start,
+        ? as week_end
       FROM persons p
       LEFT JOIN assignments a ON p.id = a.person_id 
-        AND a.assigned_at >= $1 
-        AND a.assigned_at < $2
+        AND a.assigned_at >= ? 
+        AND a.assigned_at < ?
       GROUP BY p.id, p.name
       ORDER BY weekly_score DESC, p.name ASC
-    `, [weekStart, weekEnd]);
-
+    `, [weekStart.toISOString(), weekEnd.toISOString(), weekStart.toISOString(), weekEnd.toISOString()]);
     return result.rows;
   }
 
@@ -286,15 +285,15 @@ class AssignmentRepository {
         p.name as person_name,
         COALESCE(SUM(a.action_value), 0) as weekly_score,
         COUNT(a.id) as weekly_assignment_count,
-        $2::timestamp as week_start,
-        $3::timestamp as week_end
+        ? as week_start,
+        ? as week_end
       FROM persons p
       LEFT JOIN assignments a ON p.id = a.person_id 
-        AND a.assigned_at >= $2 
-        AND a.assigned_at < $3
-      WHERE p.id = $1
+        AND a.assigned_at >= ? 
+        AND a.assigned_at < ?
+      WHERE p.id = ?
       GROUP BY p.id, p.name
-    `, [personId, weekStart, weekEnd]);
+    `, [weekStart.toISOString(), weekEnd.toISOString(), weekStart.toISOString(), weekEnd.toISOString(), personId]);
 
     return result.rows[0] || null;
   }
